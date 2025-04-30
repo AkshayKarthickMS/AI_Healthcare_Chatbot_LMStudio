@@ -1,69 +1,71 @@
-
-
-// Speech-to-text functionality
-const micButton = document.getElementById('mic-button');
-const userInput = document.getElementById('user-input');
-
-let recognition = null;
-
-// Check if the browser supports the Web Speech API
+const micBtn = document.getElementById('mic-button');
 if ('webkitSpeechRecognition' in window) {
-    recognition = new webkitSpeechRecognition();
-    recognition.continuous = true; // Keep listening until manually stopped
-    recognition.interimResults = false; // Only final results
-    recognition.lang = 'en-US'; // Set language
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
 
-    recognition.onstart = () => {
-        micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-        micButton.style.backgroundColor = '#dc2626'; // Change button color when active
-    };
-
-    recognition.onend = () => {
-        micButton.innerHTML = '<i class="fas fa-microphone"></i>';
-        micButton.style.backgroundColor = ''; // Reset button color
-    };
-
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        userInput.value = transcript; // Set the transcribed text to the input field
-    };
-
-    recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        showErrorMessage('Speech recognition failed. Please try again.');
+    micBtn.onclick = () => recognition.start();
+    recognition.onresult = (e) => {
+        document.getElementById('user-input').value = e.results[0][0].transcript;
     };
 } else {
-    // Hide the microphone button if the browser doesn't support speech recognition
-    micButton.style.display = 'none';
-    console.warn('Speech recognition not supported in this browser.');
+    micBtn.style.display = 'none';
 }
 
-// Start recognition when button is pressed, stop when released
-micButton.addEventListener('mousedown', () => {
-    if (recognition) {
-        recognition.start();
-    }
-});
-
-micButton.addEventListener('mouseup', () => {
-    if (recognition) {
-        recognition.stop();
-    }
-});
-
+window.onload = () => {
+    fetch('/chat_page')
+        .then(r => r.redirected ? showLoginForm() : document.getElementById('chat-container').style.display = 'flex');
+};
 // Global variables for session management
 let currentSessionId = null;
 let currentChatHistory = [];
 
 // Toggle between Login and Register forms
 function showLoginForm() {
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('login-form').classList.add('active');
+    document.getElementById('register-form').classList.remove('active');
 }
 
 function showRegisterForm() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('login-form').classList.remove('active');
+    document.getElementById('register-form').classList.add('active');
+}
+
+document.getElementById('send-button').onclick = sendMessage;
+document.getElementById('user-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') sendMessage();
+});
+
+function sendMessage() {
+    const input = document.getElementById('user-input');
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = '';
+    appendMessage(message, true);
+    fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+    }).then(res => res.json())
+      .then(data => {
+        if (data.success) {
+            appendMessage(data.reply, false, true);
+        }
+    });
+}
+
+function appendMessage(text, isUser, speak = false) {
+    const msg = document.createElement('div');
+    msg.className = `message ${isUser ? 'user' : 'bot'}`;
+    msg.textContent = text;
+    document.getElementById('chat-box').appendChild(msg);
+    document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+
+    if (!isUser && speak) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        speechSynthesis.speak(utterance);
+    }
 }
 
 // Toggle password visibility
@@ -109,12 +111,17 @@ function createMessageElement(content, isUser, messageId = null) {
     messageDiv.dataset.messageId = messageId;
 
     if (!isUser) {
-        const regenerateBtn = document.createElement('button');
-        regenerateBtn.className = 'regenerate';
-        regenerateBtn.innerHTML = '<i class="fas fa-redo"></i>';
-        regenerateBtn.onclick = () => regenerateResponse(messageId);
-        messageDiv.appendChild(regenerateBtn);
-    }
+        const speakerBtn = document.createElement('button');
+        speakerBtn.className = 'speaker-button';
+        speakerBtn.title = 'Read Aloud';
+        speakerBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        speakerBtn.onclick = () => {
+            const utterance = new SpeechSynthesisUtterance(content);
+            utterance.lang = 'en-US';
+            speechSynthesis.speak(utterance);
+        };
+        messageDiv.appendChild(speakerBtn);
+    }    
 
     const timeDiv = document.createElement('div');
     timeDiv.className = 'message-time';
@@ -173,58 +180,33 @@ function regenerateResponse(messageId) {
 }
 
 // Register button click event
-document.getElementById('register-button').onclick = function() {
-    const username = document.getElementById('register-username').value;
-    const password = document.getElementById('register-password').value;
-
-    if (!username || !password) {
-        showErrorMessage("Please fill in all fields for registration.");
-        return;
-    }
-
+document.getElementById('register-button').onclick = () => {
+    const u = document.getElementById('register-username').value;
+    const p = document.getElementById('register-password').value;
     fetch('/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showErrorMessage("Registration successful! Please log in.");
-            showLoginForm();
-        } else {
-            showErrorMessage(data.message);
-        }
-    })
-    .catch(error => showErrorMessage("An error occurred during registration."));
+        body: JSON.stringify({ username: u, password: p })
+    }).then(r => r.json()).then(data => {
+        if (data.success) showLoginForm();
+        else alert(data.message);
+    });
 };
 
 // Login button click event
-document.getElementById('login-button').onclick = function() {
-    const username = document.getElementById('login-username').value;
-    const password = document.getElementById('login-password').value;
-
-    if (!username || !password) {
-        showErrorMessage("Please fill in all fields for login.");
-        return;
-    }
-
+document.getElementById('login-button').onclick = () => {
+    const u = document.getElementById('login-username').value;
+    const p = document.getElementById('login-password').value;
     fetch('/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    })
-    .then(response => response.json())
-    .then(data => {
+        body: JSON.stringify({ username: u, password: p })
+    }).then(r => r.json()).then(data => {
         if (data.success) {
-            currentSessionId = data.sessionId;
-            showChat();
-            loadChatHistory();
-        } else {
-            showErrorMessage(data.message);
-        }
-    })
-    .catch(error => showErrorMessage("An error occurred during login."));
+            document.getElementById('chat-container').style.display = 'flex';
+            document.getElementById('login-form').style.display = 'none';
+        } else alert(data.message);
+    });
 };
 
 // Show the chat window after logging in
@@ -237,21 +219,8 @@ function showChat() {
 
 
 // Logout button click event
-document.getElementById('logout-button').onclick = function() {
-    fetch('/logout', {
-        method: 'POST'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            currentSessionId = null;
-            document.getElementById('chat-container').style.display = "none";
-            document.getElementById('login-form').style.display = "block";
-            document.getElementById('chat-box').innerHTML = '';
-            document.getElementById('chat-history-list').innerHTML = '';
-        }
-    })
-    .catch(error => showErrorMessage("An error occurred during logout."));
+document.getElementById('logout-button').onclick = () => {
+    fetch('/logout', { method: 'POST' }).then(() => location.reload());
 };
 
 
@@ -389,7 +358,16 @@ function handleChatMessage(message) {
     .then(data => {
         if (data.success) {
             // Add bot response to chat
-            chatBox.appendChild(createMessageElement(data.reply, false, "msg-" + Date.now()));
+            const botMsg = createMessageElement("", false, "msg-" + Date.now());
+            chatBox.appendChild(botMsg);
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index < data.reply.length) {
+                    botMsg.textContent += data.reply.charAt(index++);
+                } else {
+                    clearInterval(interval);
+                }
+            }, 20);
 
             chatBox.scrollTop = chatBox.scrollHeight;
             

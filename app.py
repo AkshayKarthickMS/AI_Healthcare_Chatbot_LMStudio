@@ -5,7 +5,25 @@ import sqlite3
 import os
 import json
 import requests
+import time
 from datetime import datetime
+from bs4 import BeautifulSoup
+from langchain.docstore.document import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores.utils import DistanceStrategy
+from langchain_community.chat_models import ChatOpenAI
+from transformers import AutoTokenizer
+from tqdm import tqdm
+from functools import lru_cache
+
+
+PUBMED_API_KEY = "323cb173ff28e09f0331c75617226ae87208"
+VECTORDB_DIR = "vector_index"
+MAX_PUBMED_ARTICLES = 10
+RECENT_DAYS = 7
+DB_PATH = 'chatbot.db'  # Path to SQLite database
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Change this to a secure secret key
@@ -50,8 +68,10 @@ def update_db():
 update_db()
 
 def chat_with_model(user_input, conversation_history):
+    
     if len(conversation_history) == 0:
-        conversation_history.append({
+        context = get_research_context(user_input)
+        conversation_history.insert(0, {
             "role": "system", 
             "content": "You are Dr. Akshay Karthick, a compassionate and concise doctor. Respond to patient queries with empathy and warmth, using 1-2 complete sentences. Ask only 1-2 questions at a time to keep the conversation focused. Offer virtual medications when appropriate and suggest physical visits only in rare cases. If any questions apart from medical queries are asked, respond like 'I'm a doctor, I can't answer those questions.' Always respond without exceeding 50 words limit. Also mainly provide the answer with the language same as the question and mainly respond with the language of  what the user provide their queries"
         })
@@ -292,5 +312,91 @@ def new_chat():
     session.pop('current_chat_id', None)
     return jsonify({"success": True, "message": "New chat started"})
         
+def rate_limited_get(url, params=None, max_requests_per_sec=10):
+    if not hasattr(rate_limited_get, "last_request_time"):
+        rate_limited_get.last_request_time = 0
+    elapsed = time.time() - rate_limited_get.last_request_time
+    if elapsed < 1.0 / max_requests_per_sec:
+        time.sleep((1.0 / max_requests_per_sec) - elapsed)
+    rate_limited_get.last_request_time = time.time()
+    return requests.get(url, params=params)
+
+def fetch_recent_pubmed_pmids(days=7, max_count=10):
+    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+    params = {
+        "db": "pubmed",
+        "term": "medicine OR health",
+        "reldate": days,
+        "retmax": max_count,
+        "sort": "pub+date",
+        "retmode": "json",
+        "api_key": PUBMED_API_KEY,
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+    return data["esearchresult"]["idlist"]
+
+def fetch_pubmed_abstract(pmid):
+    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+    params = {
+        "db": "pubmed",
+        "id": pmid,
+        "retmode": "xml",
+        "api_key": PUBMED_API_KEY,
+    }
+    try:
+        response = rate_limited_get(url, params=params)
+        soup = BeautifulSoup(response.content, "lxml")
+        abstract = soup.find("abstract")
+        return abstract.get_text(separator="\n").strip() if abstract else ""
+    except Exception as e:
+        print(f"Error fetching PMID {pmid}: {e}")
+        return ""
+
+
+# --- Update VectorDB ---
+def update_vector_database():
+    print("Fetching recent PubMed articles...")
+    pmids = fetch_recent_pubmed_pmids(days=RECENT_DAYS, max_count=MAX_PUBMED_ARTICLES)
+
+    pubmed_docs = []
+    for pmid in tqdm(pmids, desc="PubMed abstracts"):
+        abstract = fetch_pubmed_abstract(pmid)
+        if abstract:
+            pubmed_docs.append(Document(page_content=abstract, metadata={"source": f"PubMed:{pmid}"}))
+
+    all_docs = pubmed_docs
+
+    print("\nSplitting documents...")
+    tokenizer = AutoTokenizer.from_pretrained("thenlper/gte-small")
+    splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+        tokenizer, chunk_size=200, chunk_overlap=20
+    )
+    split_docs = splitter.split_documents(all_docs)
+
+    print("\nEmbedding and saving to vector database...")
+    embedding_model = HuggingFaceEmbeddings(model_name="thenlper/gte-small")
+
+    # Check if the vector DB exists and append documents
+    if os.path.exists(VECTORDB_DIR):
+        vectordb = FAISS.load_local(VECTORDB_DIR, embeddings=embedding_model, allow_dangerous_deserialization=True)
+        vectordb.add_documents(split_docs)  # Add new documents to the vector DB
+    else:
+        vectordb = FAISS.from_documents(split_docs, embedding=embedding_model, distance_strategy=DistanceStrategy.COSINE)
+
+    vectordb.save_local(VECTORDB_DIR)
+    print("Vector DB saved!")
+
+# --- RAG Context Fetch ---
+@lru_cache(maxsize=1)
+def get_vectordb():
+    return FAISS.load_local(VECTORDB_DIR, embeddings=HuggingFaceEmbeddings(model_name="thenlper/gte-small"), allow_dangerous_deserialization=True)
+
+def get_research_context(query):
+    vectordb = get_vectordb()
+    docs = vectordb.similarity_search(query, k=3)
+    return "\n\n".join(f"Source: {doc.metadata['source']}\n{doc.page_content[:500]}..." for doc in docs)
+
 if __name__ == '__main__':
+    update_vector_database()
     app.run(debug=True)
