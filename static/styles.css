@@ -1,18 +1,4 @@
-.speaker-button {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: #4299e1;
-    font-size: 16px;
-    margin-left: 8px;
-    transition: color 0.2s ease-in-out;
-}
-
-.speaker-button:hover {
-    color: #2563eb;
-}
-
-
+/* Base Reset & Font */
 * {
     margin: 0;
     padding: 0;
@@ -35,13 +21,12 @@ body {
     height: 100vh;
 }
 
-/* Auth Form Styles */
+/* ========== AUTH FORMS ========== */
 .auth-form {
     background: white;
     padding: 2.5rem;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    width: 100%;
     max-width: 400px;
     margin: 20px auto;
 }
@@ -68,7 +53,6 @@ body {
 .auth-form input {
     width: 100%;
     padding: 12px;
-    margin: 8px 0;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     font-size: 1rem;
@@ -116,7 +100,7 @@ body {
     color: #718096;
 }
 
-/* Chat Container Styles */
+/* ========== CHAT CONTAINER ========== */
 .chat-container {
     display: flex;
     background: #fff;
@@ -124,9 +108,14 @@ body {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 1400px;
+    overflow-x: hidden;
+    min-width: 0;             /* ✅ add this */
+
 }
 
-/* Sidebar Styles */
+/* SIDEBAR */
 .chat-sidebar {
     width: 300px;
     background: #2c5282;
@@ -169,11 +158,11 @@ body {
     padding: 0.8rem;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.2s;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
+    transition: background 0.2s;
 }
 
 .chat-history-item:hover {
@@ -184,11 +173,13 @@ body {
     background: rgba(255, 255, 255, 0.15);
 }
 
-/* Main Chat Area */
+/* MAIN CHAT AREA */
 .main-chat-area {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow-x: hidden; 
 }
 
 .chat-header {
@@ -245,6 +236,7 @@ body {
     opacity: 0.8;
 }
 
+/* CHAT BOX */
 .chat-box {
     flex-grow: 1;
     background: #f7fafc;
@@ -274,6 +266,32 @@ body {
     position: relative;
     margin: 0.8rem 0;
     line-height: 1.4;
+    overflow-wrap: break-word;    /* ✅ wraps long words */
+    word-break: break-word;       /* ✅ breaks inside long words if needed */
+    white-space: pre-line;        /* ✅ preserves line breaks, wraps naturally */
+    display: inline-block;        /* ✅ keeps width to content but wraps text */
+    overflow: visible;            /* ✅ no hidden overflow */
+}
+
+
+.message.bot {
+    background: white;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.message.user {
+    background: #ebf8ff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    color: #718096;
+    margin-top: 0.3rem;
+    text-align: right;
 }
 
 .message .regenerate {
@@ -299,19 +317,22 @@ body {
     opacity: 1;
 }
 
-.message.bot {
-    background: white;
-    align-self: flex-start;
-    border-bottom-left-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+/* SPEAKER BUTTON */
+.speaker-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #4299e1;
+    font-size: 16px;
+    margin-left: 8px;
+    transition: color 0.2s ease-in-out;
 }
 
-.message.user {
-    background: #ebf8ff;
-    align-self: flex-end;
-    border-bottom-right-radius: 4px;
+.speaker-button:hover {
+    color: #2563eb;
 }
 
+/* INPUT AREA */
 .input-area {
     background: #fff;
     padding: 1rem;
@@ -353,32 +374,7 @@ body {
     background-color: #2b6cb0;
 }
 
-.message-time {
-    font-size: 0.7rem;
-    color: #718096;
-    margin-top: 0.3rem;
-    text-align: right;
-}
-
-/* Scrollbar Styles */
-::-webkit-scrollbar {
-    width: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: #f7fafc;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
-}
-
-/* Add this to your existing CSS */
+/* MIC BUTTON */
 #mic-button {
     background-color: #3b82f6;
     border: none;
@@ -398,7 +394,7 @@ body {
     font-size: 16px;
 }
 
-/* Add this to your existing CSS */
+/* UPLOAD STATUS */
 #upload-status {
     margin-top: 10px;
     display: flex;
@@ -420,7 +416,20 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-#status-message {
-    font-size: 14px;
-    color: #3b82f6;
+/* SCROLLBAR */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f7fafc;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
 }

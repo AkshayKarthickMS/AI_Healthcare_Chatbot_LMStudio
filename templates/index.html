@@ -5,51 +5,89 @@
     <title>Dr. CIT - Virtual Health Assistant</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="main-wrapper">
-        <!-- Auth Forms -->
-        <div id="login-form" class="auth-card active">
+    <div class="container">
+        <!-- Login Form -->
+        <div id="login-form" class="auth-form">
             <h2><i class="fas fa-stethoscope"></i> Welcome Back</h2>
-            <input type="text" id="login-username" placeholder="Username">
-            <input type="password" id="login-password" placeholder="Password">
+            <div class="input-group">
+                <input type="text" id="login-username" placeholder="Username">
+            </div>
+            <div class="input-group">
+                <input type="password" id="login-password" placeholder="Password">
+                <i class="fas fa-eye eye-icon" onclick="togglePasswordVisibility('login-password')"></i>
+            </div>
             <button id="login-button">Login</button>
-            <p>New here? <a href="#" onclick="showRegisterForm()">Register</a></p>
+            <div class="auth-switch">
+                New here? <a href="#" onclick="showRegisterForm()">Register</a>
+            </div>
         </div>
 
-        <div id="register-form" class="auth-card">
+        <!-- Register Form -->
+        <div id="register-form" class="auth-form" style="display: none;">
             <h2><i class="fas fa-user-plus"></i> Create Account</h2>
-            <input type="text" id="register-username" placeholder="Username">
-            <input type="password" id="register-password" placeholder="Password">
+            <div class="input-group">
+                <input type="text" id="register-username" placeholder="Username">
+            </div>
+            <div class="input-group">
+                <input type="password" id="register-password" placeholder="Password">
+                <i class="fas fa-eye eye-icon" onclick="togglePasswordVisibility('register-password')"></i>
+            </div>
             <button id="register-button">Register</button>
-            <p>Already registered? <a href="#" onclick="showLoginForm()">Login</a></p>
+            <div class="auth-switch">
+                Already registered? <a href="#" onclick="showLoginForm()">Login</a>
+            </div>
         </div>
 
-        <!-- Chat Interface -->
-        <div id="chat-container" class="chat-container">
-            <div class="chat-header">
-                <div>
-                    <h3><i class="fas fa-user-md"></i> Dr. Akshay</h3>
-                    <p>Virtual Medical Assistant</p>
+        <!-- Chat Container -->
+        <div id="chat-container" class="chat-container" style="display: none;">
+            <!-- Sidebar and chat header -->
+            <div class="chat-sidebar">
+                <div class="sidebar-header">
+                    <button id="new-chat" class="new-chat-btn">
+                        <i class="fas fa-plus"></i> New Conversation
+                    </button>
                 </div>
-                <button id="logout-button" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
-
-            <div id="chat-box" class="chat-box">
-                <div class="chat-welcome">
-                    <h2>👋 Hello!</h2>
-                    <p>I'm here to help with your medical queries.</p>
+                <div id="chat-history-list" class="chat-history-list">
+                    <!-- Dynamic chat history -->
                 </div>
             </div>
 
-            <div class="chat-input">
-                <input type="text" id="user-input" placeholder="Ask me anything...">
-                <button id="mic-button" title="Speak"><i class="fas fa-microphone"></i></button>
-                <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+            <!-- Main Chat Area -->
+            <div class="main-chat-area">
+                <div class="chat-header">
+                    <div class="header-left">
+                        <div class="avatar">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div class="header-info">
+                            <h2>Dr. Akshay</h2>
+                            <div class="status">Virtual Medical Assistant</div>
+                        </div>
+                    </div>
+                    <button id="logout-button" class="icon-button" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+
+                <div id="chat-box" class="chat-box">
+                    <div class="chat-welcome">
+                        <h2>👋 Hello!</h2>
+                        <p>I'm here to help with your medical queries.</p>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <input type="text" id="user-input" placeholder="Ask me anything...">
+                    <button id="mic-button" title="Speak"><i class="fas fa-microphone"></i></button>
+                    <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+                </div>
             </div>
         </div>
     </div>
+
     <script src="static/script.js"></script>
 </body>
 </html>

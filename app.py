@@ -398,5 +398,8 @@ def get_research_context(query):
     return "\n\n".join(f"Source: {doc.metadata['source']}\n{doc.page_content[:500]}..." for doc in docs)
 
 if __name__ == '__main__':
-    update_vector_database()
+    import sys
+    if os.environ.get("FLASK_RUN_FROM_CLI") != "true" and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        update_vector_database()
     app.run(debug=True)
+
