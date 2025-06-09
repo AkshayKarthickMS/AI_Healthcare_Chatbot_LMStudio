@@ -267,3 +267,18 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch('/chat_page')
         .then(res => res.redirected ? showLoginForm() : (showChat(), loadChatHistory()));
 });
+function showLoginForm() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('chat-container').style.display = 'none';
+}
+
+function showRegisterForm() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('chat-container').style.display = 'none';
+}
+
+// ✅ Make accessible globally
+window.showRegisterForm = showRegisterForm;
+window.showLoginForm = showLoginForm;

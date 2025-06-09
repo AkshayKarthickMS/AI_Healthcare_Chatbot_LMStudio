@@ -67,14 +67,29 @@ def update_db():
 
 update_db()
 
+
+def detect_language(text):
+    try:
+        from langdetect import detect
+        return detect(text)
+    except:
+        return "en"
+
+
 def chat_with_model(user_input, conversation_history):
-    
     if len(conversation_history) == 0:
-        context = get_research_context(user_input)
+        summary = session.get('health_summary', 'No prior health records found.')
         conversation_history.insert(0, {
-            "role": "system", 
-            "content": "You are Dr. Akshay Karthick, a compassionate and concise doctor. Respond to patient queries with empathy and warmth, using 1-2 complete sentences. Ask only 1-2 questions at a time to keep the conversation focused. Offer virtual medications when appropriate and suggest physical visits only in rare cases. If any questions apart from medical queries are asked, respond like 'I'm a doctor, I can't answer those questions.' Always respond without exceeding 50 words limit. Also mainly provide the answer with the language same as the question and mainly respond with the language of  what the user provide their queries"
+            "role": "system",
+            "content": f"""You are Dr. AI&DS, a compassionate and concise doctor. Below is the summary of this patient's prior health records: {summary}. Respond to patient queries based on current health issues and also on that summary with empathy and warmth using 1–2 complete sentences. Ask only 1–2 questions at a time to keep the conversation focused. Do not provide prescriptions or suggest in-person visits. If asked non-medical questions, say: 'I'm a doctor, I can't answer that question.'
+
+Your reply must be in the **exact same language** as the user input. For example:
+- User: 'मैं ठीक नहीं हूँ' → Reply in Hindi
+- User: 'I feel cold and tired' → Reply in English
+
+Do not guess or switch languages. Respond in the same language unless the user changes it explicitly. Also, do not exceed 50 words."""
         })
+
     
     conversation_history.append({"role": "user", "content": user_input})
     
@@ -124,13 +139,43 @@ def login():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username=?", (username,))
     user = cursor.fetchone()
-    conn.close()
 
     if user and check_password_hash(user[2], password):
         session['user_id'] = user[0]
         session['username'] = username
+
+        # ✅ Fetch all chats for that user
+        cursor.execute("SELECT messages FROM chats WHERE user_id = ?", (user[0],))
+        chats = cursor.fetchall()
+        conn.close()
+
+        full_history = []
+        for chat in chats:
+            messages = json.loads(chat[0])
+            for msg in messages:
+                if msg['role'] in ['user', 'assistant']:
+                    full_history.append(msg)
+
+        if full_history:
+            # Add instruction to summarize health
+            full_history.insert(0, {
+                "role": "system",
+                "content": "You are a concise and empathetic doctor. Please summarize ONLY the user's past health issues based on all previous conversations. Do not ask questions or give new advice."
+            })
+            full_history.append({
+                "role": "user",
+                "content": "Summarize my previous health problems."
+            })
+
+            try:
+                summary = chat_with_model("Summarize my previous health problems.", full_history)
+                session['health_summary'] = summary
+            except Exception as e:
+                print("Error summarizing health history:", e)
+
         return jsonify({"success": True, "message": "Login successful"})
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
 
 @app.route('/register', methods=['POST'])
 def register():

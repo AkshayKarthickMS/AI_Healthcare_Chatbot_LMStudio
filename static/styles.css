@@ -105,19 +105,24 @@ body {
     display: flex;
     background: #fff;
     height: 100vh;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     width: 100%;
     max-width: 1400px;
     overflow-x: hidden;
-    min-width: 0;             /* ✅ add this */
+    min-width: 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
 
+    /* NEW LINE */
+    align-items: stretch;
 }
 
 /* SIDEBAR */
 .chat-sidebar {
     width: 300px;
+    min-width: 300px;  /* ✅ Prevents shrinking */
+    max-width: 300px;  /* ✅ Prevents growing */
+    flex-shrink: 0;    /* ✅ Ensures it doesn't shrink in flex layout */
+
     background: #2c5282;
     color: white;
     display: flex;
