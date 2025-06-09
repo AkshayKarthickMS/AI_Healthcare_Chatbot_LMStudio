@@ -57,10 +57,21 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.className = `message ${isUser ? 'user' : 'bot'}`;
         msg.textContent = content;
 
+        // Time stamp
         const time = document.createElement('div');
         time.className = 'message-time';
         time.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         msg.appendChild(time);
+
+        // Add speaker button only for bot
+        if (!isUser) {
+            const speakerBtn = document.createElement('button');
+            speakerBtn.className = 'speaker-button';
+            speakerBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            speakerBtn.title = 'Speak response';
+            speakerBtn.onclick = () => speakAloud(content);
+            msg.appendChild(speakerBtn);
+        }
 
         return msg;
     }
@@ -87,24 +98,43 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (data.success) {
                 currentSessionId = data.chatId;
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'message bot';
-                chatBox.appendChild(botMessageDiv);
+
+                // Create bot message container (empty for now)
+                const msg = document.createElement('div');
+                msg.className = 'message bot';
+
+                const msgContent = document.createElement('span');
+                msg.appendChild(msgContent); // Append empty span to type into
+
+                chatBox.appendChild(msg);
                 chatBox.scrollTop = chatBox.scrollHeight;
 
+                // Typing effect
                 const fullText = data.reply;
                 let i = 0;
                 const typing = setInterval(() => {
-                    botMessageDiv.textContent += fullText.charAt(i);
+                    msgContent.textContent += fullText.charAt(i);
                     i++;
                     chatBox.scrollTop = chatBox.scrollHeight;
+
                     if (i >= fullText.length) {
                         clearInterval(typing);
+
+                        // Add timestamp
                         const timeDiv = document.createElement('div');
                         timeDiv.className = 'message-time';
-                        timeDiv.textContent = new Date().toLocaleTimeString();
-                        botMessageDiv.appendChild(timeDiv);
-                        speakAloud(fullText);
+                        timeDiv.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        msg.appendChild(timeDiv);
+
+                        // Add speaker button
+                        const speakerBtn = document.createElement('button');
+                        speakerBtn.className = 'speaker-button';
+                        speakerBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        speakerBtn.title = 'Speak response';
+                        speakerBtn.onclick = () => speakAloud(fullText);
+                        msg.appendChild(speakerBtn);
+
+                        chatBox.scrollTop = chatBox.scrollHeight;
                         loadChatHistory();
                     }
                 }, 30);
@@ -159,23 +189,28 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.interimResults = false;
         recognition.lang = 'en-US';
 
-        recognition.onresult = event => {
-            userInput.value = event.results[0][0].transcript;
-            userInput.focus(); // optional: keep focus
+        recognition.onresult = (event) => {
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const result = event.results[i];
+                if (result.isFinal) {
+                    finalTranscript += result[0].transcript;
+                }
+            }
+
+            if (finalTranscript.trim()) {
+                const inputBox = document.getElementById('user-input');
+                inputBox.value = finalTranscript.trim();
+                inputBox.focus();
+            }
         };
+
 
         recognition.onerror = () => {
             showErrorMessage("Voice input error.");
         };
 
-        recognition.onend = () => {
-            if (isListening) {
-                recognition.start(); // ⬅️ restart if still active
-            } else {
-                micButton.innerHTML = '<i class="fas fa-microphone"></i>';
-                micButton.style.backgroundColor = '';
-            }
-        };
     }
 
 
@@ -194,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
             micButton.style.backgroundColor = '';
         }
     });
+
 
 
     // Button Handlers
