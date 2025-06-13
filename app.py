@@ -19,7 +19,7 @@ from tqdm import tqdm
 from functools import lru_cache
 
 
-PUBMED_API_KEY = "323cb173ff28e09f0331c75617226ae87208"
+PUBMED_API_KEY = "your_pubmed_api_key_here"
 VECTORDB_DIR = "vector_index"
 MAX_PUBMED_ARTICLES = 10
 RECENT_DAYS = 7
